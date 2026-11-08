@@ -19,7 +19,7 @@ jobs:
             binary: main/build/noldoj
           - name: windows-x64
             os: windows-latest
-            binary: main/build/Release/noldoj.exe
+            binary: main/build/noldoj.exe
 
     steps:
       - name: 检出代码
@@ -29,16 +29,34 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ninja-build libcurl4-openssl-dev
 
+      - name: 安装 MSYS2 / MinGW-w64（Windows）
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+
       - name: 配置（Linux）
         if: runner.os == 'Linux'
         run: cmake -S main -B main/build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
-      - name: 配置（Windows）
+      - name: 配置（Windows / MinGW）
         if: runner.os == 'Windows'
-        run: cmake -S main -B main/build -G "Visual Studio 17 2022" -A x64
+        shell: msys2 {0}
+        run: cmake -S main -B main/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS=-static
 
-      - name: 构建
-        run: cmake --build main/build --config Release
+      - name: 构建（Linux）
+        if: runner.os == 'Linux'
+        run: cmake --build main/build
+
+      - name: 构建（Windows / MinGW）
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: cmake --build main/build
 
       - name: 测试
         run: python tests/run_tests.py "${{ matrix.binary }}"
