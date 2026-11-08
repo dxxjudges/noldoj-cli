@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>命令行手册 — NoldOJ CLI</title>
+<meta name="description" content="NoldOJ CLI 完整命令行手册：全局选项、28 个命令分组、noldoj api 通用请求与典型工作流。">
+<style>
+  :root {
+    --bg: #080d1a;
+    --panel: #0f1730;
+    --panel-2: #121d3d;
+    --border: #22315c;
+    --text: #e8eeff;
+    --muted: #93a3cc;
+    --accent: #6c93ff;
+    --accent-2: #34d3a4;
+    --warn: #f0b46c;
+    --code-bg: #070d1f;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1100px 520px at 15% -8%, rgba(108, 147, 255, 0.18), transparent 60%),
+      radial-gradient(900px 500px at 90% 0%, rgba(52, 211, 164, 0.10), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+  header {
+    position: sticky; top: 0; z-index: 20;
+    backdrop-filter: blur(14px);
+    background: rgba(8, 13, 26, 0.82);
+    border-bottom: 1px solid rgba(34, 49, 92, 0.7);
+  }
+  header .wrap { display: flex; align-items: center; justify-content: space-between; height: 62px; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: 0.4px; color: var(--text); text-decoration: none; }
+  .logo {
+    width: 32px; height: 32px; border-radius: 9px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--accent), #8f7bff);
+    color: #fff; font-weight: 800; font-size: 17px;
+    box-shadow: 0 0 22px rgba(108, 147, 255, 0.45);
+  }
+  nav { display: flex; align-items: center; gap: 22px; font-size: 14px; }
+  nav a { color: var(--muted); text-decoration: none; transition: color 0.15s ease; }
+  nav a:hover { color: var(--text); }
+  nav a.active { color: var(--accent); }
+
+  .layout { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 40px; padding: 34px 0 70px; align-items: start; }
+  .toc {
+    position: sticky; top: 90px;
+    max-height: calc(100vh - 116px);
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(15, 23, 48, 0.72);
+    padding: 16px 14px;
+    font-size: 13px;
+  }
+  .toc h2 { margin: 0 0 10px; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+  .toc ul { list-style: none; margin: 0; padding: 0; }
+  .toc li { margin: 0; }
+  .toc a { display: block; padding: 3px 8px; border-radius: 6px; color: var(--muted); text-decoration: none; line-height: 1.5; }
+  .toc a:hover { color: var(--text); background: rgba(108, 147, 255, 0.10); }
+  .toc a.lv3 { padding-left: 20px; font-size: 12.5px; }
+
+  .doc {
+    min-width: 0;
+    background: linear-gradient(180deg, rgba(18, 29, 61, 0.55), rgba(15, 23, 48, 0.35));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 34px 40px 44px;
+  }
+  .doc h1 { font-size: 30px; margin: 0 0 10px; letter-spacing: -0.6px; }
+  .doc h2 { font-size: 23px; margin: 42px 0 12px; padding-bottom: 9px; border-bottom: 1px solid var(--border); letter-spacing: -0.3px; scroll-margin-top: 86px; }
+  .doc h3 { font-size: 18px; margin: 30px 0 10px; color: #c5d4ff; scroll-margin-top: 86px; }
+  .doc h4 { font-size: 16px; margin: 24px 0 8px; color: #b9caff; }
+  .doc p { color: #cfd9f5; margin: 10px 0; }
+  .doc > p:first-of-type { color: var(--muted); }
+  .doc a { text-decoration: none; }
+  .doc a:hover { text-decoration: underline; }
+  .doc ul, .doc ol { padding-left: 24px; color: #cfd9f5; }
+  .doc li { margin: 4px 0; }
+  .doc code {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 13px;
+    background: rgba(108, 147, 255, 0.12);
+    border: 1px solid rgba(108, 147, 255, 0.18);
+    border-radius: 5px;
+    padding: 1px 5px;
+    color: #d5e2ff;
+  }
+  .doc pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    margin: 14px 0;
+    position: relative;
+  }
+  .doc pre code { background: transparent; border: 0; padding: 0; font-size: 13.2px; line-height: 1.7; color: #cfe0ff; }
+  .doc table { width: 100%; border-collapse: collapse; margin: 14px 0 20px; font-size: 13.6px; }
+  .doc th, .doc td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+  .doc th { background: rgba(108, 147, 255, 0.10); color: #c7d5ff; font-weight: 600; white-space: nowrap; }
+  .doc tr:nth-child(even) td { background: rgba(18, 29, 61, 0.35); }
+  .doc blockquote {
+    margin: 14px 0; padding: 10px 16px;
+    border-left: 3px solid var(--accent);
+    background: rgba(108, 147, 255, 0.08);
+    border-radius: 0 8px 8px 0;
+    color: var(--muted);
+  }
+  .doc blockquote p { margin: 0; }
+
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px;
+    font-size: 11.5px; padding: 3px 9px;
+    border-radius: 6px; cursor: pointer;
+    color: var(--muted);
+    background: rgba(18, 29, 61, 0.9);
+    border: 1px solid var(--border);
+    opacity: 0; transition: opacity 0.15s ease, color 0.15s ease;
+  }
+  .doc pre:hover .copy-btn { opacity: 1; }
+  .copy-btn:hover { color: var(--text); border-color: rgba(108, 147, 255, 0.6); }
+
+  .status {
+    padding: 40px 6px;
+    color: var(--muted);
+    font-size: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .spinner {
+    width: 15px; height: 15px; border-radius: 50%;
+    border: 2px solid rgba(108, 147, 255, 0.25);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-box {
+    border: 1px solid rgba(240, 180, 108, 0.45);
+    background: rgba(240, 180, 108, 0.08);
+    border-radius: 10px;
+    padding: 18px;
+    color: #f4d6ae;
+    font-size: 14px;
+  }
+  .error-box code { color: #ffe2b5; }
+
+  footer { border-top: 1px solid var(--border); padding: 26px 0 40px; color: var(--muted); font-size: 13.5px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 940px) {
+    .layout { grid-template-columns: 1fr; gap: 20px; }
+    .toc { position: static; max-height: none; }
+    .doc { padding: 26px 20px 34px; }
+  }
+  @media (max-width: 600px) {
+    nav { gap: 14px; font-size: 13px; }
+    .doc h2 { font-size: 21px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="logo">N</span>NoldOJ CLI</a>
+    <nav>
+      <a href="index.html">首页</a>
+      <a class="active" href="cmdline.html">命令行手册</a>
+      <a href="support.html">平台支持</a>
+      <a href="https://github.com/dxxjudges/noldoj-cli">GitHub</a>
+      <a href="https://github.com/dxxjudges/noldoj-cli/releases">Releases</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="layout">
+    <aside class="toc">
+      <h2>目录</h2>
+      <ul id="toc-list">
+        <li><a href="#loading">加载中…</a></li>
+      </ul>
+    </aside>
+
+    <article class="doc" id="doc">
+      <div class="status" id="status"><span class="spinner"></span>正在加载 cmdline.md…</div>
+    </article>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>NoldOJ CLI · 文档由 <code>cmdline.md</code> 动态渲染 · 部署于 GitHub Pages</div>
+    <div>
+      <a href="https://github.com/dxxjudges/noldoj-cli">源码</a> ·
+      <a href="https://github.com/dxxjudges/noldoj-cli/issues">问题反馈</a> ·
+      <a href="https://github.com/dxxjudges/noldoj-cli/wiki">Wiki</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script>
+(function () {
+  var doc = document.getElementById('doc');
+  var status = document.getElementById('status');
+  var tocList = document.getElementById('toc-list');
+  var mdUrl = 'cmdline.md';
+
+  function slugify(text) {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/[\s]+/g, '-')
+      .replace(/[^\w\u4e00-\u9fa5-]/g, '')
+      .replace(/-+/g, '-');
+  }
+
+  function buildToc() {
+    var headings = doc.querySelectorAll('h2, h3');
+    if (!headings.length) return;
+    tocList.innerHTML = '';
+    headings.forEach(function (h) {
+      if (!h.id) h.id = slugify(h.textContent);
+      var li = document.createElement('li');
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.className = 'lv3';
+      li.appendChild(a);
+      tocList.appendChild(li);
+    });
+  }
+
+  function addCopyButtons() {
+    doc.querySelectorAll('pre').forEach(function (pre) {
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = '复制';
+      btn.addEventListener('click', function () {
+        var code = pre.querySelector('code');
+        var text = code ? code.textContent : pre.textContent;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () {
+            btn.textContent = '已复制';
+            setTimeout(function () { btn.textContent = '复制'; }, 1400);
+          });
+        }
+      });
+      pre.appendChild(btn);
+    });
+  }
+
+  function showError(message) {
+    status.remove();
+    var box = document.createElement('div');
+    box.className = 'error-box';
+    box.innerHTML = message;
+    doc.appendChild(box);
+    tocList.innerHTML = '<li><a href="cmdline.md">下载原始 Markdown</a></li>';
+  }
+
+  function render(markdown) {
+    if (!window.marked) {
+      showError('无法加载 Markdown 渲染库。请检查网络，或直接访问 <a href="cmdline.md">cmdline.md</a>。');
+      return;
+    }
+    marked.setOptions({ gfm: true, breaks: false });
+    doc.innerHTML = marked.parse(markdown);
+    status.remove();
+    buildToc();
+    addCopyButtons();
+    if (location.hash) {
+      var target = document.getElementById(location.hash.slice(1));
+      if (target) target.scrollIntoView();
+    }
+  }
+
+  fetch(mdUrl, { cache: 'no-cache' })
+    .then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    })
+    .then(render)
+    .catch(function (err) {
+      showError('加载 <code>cmdline.md</code> 失败（' + err.message + '）。' +
+        '如果你是在本地以 file:// 方式打开本页面，浏览器会阻止读取本地文件；' +
+        '请通过 HTTP 服务器访问，或直接阅读 <a href="cmdline.md">cmdline.md</a>。');
+    });
+})();
+</script>
+</body>
+</html>

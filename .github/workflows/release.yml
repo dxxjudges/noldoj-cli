@@ -1,0 +1,117 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: 构建并发布
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'build ')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码（含全部历史与标签）
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: 解析版本号
+        id: version
+        run: |
+          set -euo pipefail
+          message="$(git log -1 --pretty=%s)"
+          if [[ ! "$message" =~ ^build\ ([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::提交信息必须为 'build X.Y.Z'，当前为: $message"
+            exit 1
+          fi
+          version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "发布版本: v$version"
+
+      - name: 安装构建依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libcurl4-openssl-dev \
+            g++-mingw-w64-x86-64 g++-mingw-w64-i686
+
+      - name: 构建 Linux x64
+        run: |
+          cmake -S main -B build-linux -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-linux
+
+      - name: 测试 Linux x64
+        run: python3 tests/run_tests.py build-linux/noldoj
+
+      - name: 构建 Windows x64（MinGW 静态链接）
+        run: |
+          cmake -S main -B build-win64 -G Ninja \
+            -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+            -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake --build build-win64
+
+      - name: 构建 Windows x86（MinGW 静态链接）
+        run: |
+          cmake -S main -B build-win32 -G Ninja \
+            -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
+            -DCMAKE_CXX_COMPILER=i686-w64-mingw32-g++ \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake --build build-win32
+
+      - name: 整理发布产物
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp build-linux/noldoj dist/noldoj-linux-x64
+          cp build-win64/noldoj.exe dist/noldoj-windows-x64.exe
+          cp build-win32/noldoj.exe dist/noldoj-windows-x86.exe
+          chmod +x dist/noldoj-linux-x64
+          ls -lh dist
+
+      - name: 生成发布说明（自上次 Release 以来的全部提交）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          prev_tag="$(gh release list --limit 1 --json tagName --jq '.[0].tagName // empty' 2>/dev/null || true)"
+          if [[ -n "$prev_tag" ]]; then
+            range="${prev_tag}..HEAD"
+            range_label="自 ${prev_tag} 以来的全部提交"
+          else
+            range="HEAD"
+            range_label="自仓库首个提交以来的全部提交"
+          fi
+          {
+            echo "## ${range_label}"
+            echo
+            git log "$range" --pretty=format:'- %s (%h)'
+            echo
+          } > notes.md
+          echo "----- notes.md -----"
+          cat notes.md
+
+      - name: 创建 GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.version.outputs.tag }}"
+          gh release create "$tag" \
+            dist/noldoj-linux-x64 \
+            dist/noldoj-windows-x64.exe \
+            dist/noldoj-windows-x86.exe \
+            --title "NoldOJ CLI $tag" \
+            --target "$GITHUB_SHA" \
+            --notes-file notes.md \
+            --latest

@@ -1,0 +1,36 @@
+# 构建产物
+build/
+build-*/
+out/
+cmake-build-*/
+
+# CMake / 编译中间文件
+CMakeCache.txt
+CMakeFiles/
+*.o
+*.obj
+*.a
+*.lib
+*.exe
+*.pdb
+*.ilk
+
+# 可执行文件（源码根目录）
+noldoj
+noldoj.exe
+
+# 测试与临时输出
+tests/__pycache__/
+*.pyc
+*.log
+*.tmp
+
+# IDE / 编辑器
+.vs/
+.vscode/
+.idea/
+*.user
+
+# 操作系统
+.DS_Store
+Thumbs.db

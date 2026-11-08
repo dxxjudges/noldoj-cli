@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            os: ubuntu-latest
+            binary: main/build/noldoj
+          - name: windows-x64
+            os: windows-latest
+            binary: main/build/Release/noldoj.exe
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Linux 依赖
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libcurl4-openssl-dev
+
+      - name: 配置（Linux）
+        if: runner.os == 'Linux'
+        run: cmake -S main -B main/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: 配置（Windows）
+        if: runner.os == 'Windows'
+        run: cmake -S main -B main/build -G "Visual Studio 17 2022" -A x64
+
+      - name: 构建
+        run: cmake --build main/build --config Release
+
+      - name: 测试
+        run: python tests/run_tests.py "${{ matrix.binary }}"
