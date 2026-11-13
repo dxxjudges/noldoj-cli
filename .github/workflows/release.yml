@@ -247,8 +247,9 @@ jobs:
         run: |
           docker run --rm --platform linux/arm64 -v "$PWD:/src" -w /src alpine:3.20 sh -c '
             set -euxo pipefail
-            apk add --no-cache build-base cmake ninja curl-dev openssl-dev zlib-dev brotli-dev zstd-dev
+            apk add --no-cache build-base cmake ninja curl-dev curl-static openssl-dev
             cmake -S main -B build-android -G Ninja -DCMAKE_BUILD_TYPE=Release \
+              -DCURL_USE_STATIC_LIBS=ON \
               -DCMAKE_EXE_LINKER_FLAGS="-static"
             cmake --build build-android
             mkdir -p dist
