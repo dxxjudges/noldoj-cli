@@ -39,6 +39,9 @@ void saveConfig(const std::string& path, const AppConfig& config);
 CredentialStore loadCredentials(const std::string& path);
 void saveCredentials(const std::string& path, const CredentialStore& store);
 
+// 主密钥（用于加密 credentials.json）的存放位置描述；尚未生成时返回空字符串。
+std::string masterKeySource(const std::string& configDir);
+
 // 依据 --site 参数（站点名或完整 URL）解析出实际使用的站点。
 // 空参数时使用配置中的 default_site；未配置的站点名报错；URL 形式允许直接使用。
 SiteConfig resolveSite(const AppConfig& config, const std::string& siteArg);

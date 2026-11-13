@@ -33,6 +33,8 @@ add_executable(noldoj
     src/main.cpp
     src/core/url.cpp
     src/core/config.cpp
+    src/core/crypto.cpp
+    src/core/keyring.cpp
     src/core/auth.cpp
     src/core/api_client.cpp
     ${NOLDOJ_NET_SOURCE}
@@ -46,7 +48,8 @@ target_include_directories(noldoj PRIVATE
 )
 
 if(WIN32)
-    target_link_libraries(noldoj PRIVATE winhttp shell32)
+    # advapi32: 凭据管理器（CredRead/CredWrite）；bcrypt: 密码学随机数
+    target_link_libraries(noldoj PRIVATE winhttp shell32 advapi32 bcrypt)
 else()
     find_package(Threads REQUIRED)
     target_link_libraries(noldoj PRIVATE CURL::libcurl Threads::Threads)

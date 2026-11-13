@@ -164,7 +164,9 @@ CLI 只使用私人访问令牌（Personal Access Token，PAT）作为凭据，�
 | 命令 | 说明 |
 | --- | --- |
 | `config show` | 显示配置文件内容 |
-| `config path` | 显示配置与凭证文件路径 |
+| `config path` | 显示配置与凭证文件路径、加密主密钥的存放位置 |
+
+> 私人令牌不会以明文落盘：`credentials.json` 使用 AES-128-CTR + HMAC-SHA256 加密，主密钥为首次启动时生成的 128 位随机密钥，保存在系统凭据库（Windows 凭据管理器 / macOS 钥匙串 / Linux Secret Service），不可用时回退到配置目录下权限 0600 的 `master.key`。
 
 ### system
 

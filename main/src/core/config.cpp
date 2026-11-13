@@ -10,6 +10,12 @@
 #include <fstream>
 #include <stdexcept>
 
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
+
+#include "core/crypto.hpp"
+#include "core/keyring.hpp"
 #include "json.hpp"
 
 using nlohmann::json;
@@ -125,12 +131,28 @@ CredentialStore loadCredentials(const std::string& path) {
     CredentialStore store;
     if (!fs::exists(path)) return store;
 
+    const std::string content = readFile(path);
+    const std::string configDir = fs::path(path).parent_path().string();
+
     json raw;
-    try {
-        raw = json::parse(readFile(path));
-    } catch (const std::exception& e) {
-        throw std::runtime_error("凭证文件解析失败 (" + path + "): " + e.what());
+    bool plaintext = false;
+    if (crypto::isEnvelope(content)) {
+        MasterKeyInfo info;
+        if (!tryLoadMasterKey(configDir, &info)) {
+            throw std::runtime_error(
+                "找不到用于解密凭证的主密钥（系统凭据库与本机 master.key 均无记录）。\n"
+                "请重新执行 `noldoj site add ... --token <pat>` 写入凭据，或删除 " + path + " 后重新配置。");
+        }
+        raw = json::parse(crypto::unseal(info.key, content));
+    } else {
+        try {
+            raw = json::parse(content);
+        } catch (const std::exception& e) {
+            throw std::runtime_error("凭证文件解析失败 (" + path + "): " + e.what());
+        }
+        plaintext = true;
     }
+
     if (!raw.contains("sites") || !raw["sites"].is_object()) return store;
 
     for (auto it = raw["sites"].begin(); it != raw["sites"].end(); ++it) {
@@ -138,6 +160,9 @@ CredentialStore loadCredentials(const std::string& path) {
         entry.personal_token = it.value().value("personal_token", std::string());
         store.sites[it.key()] = entry;
     }
+
+    // 旧版本以明文保存，读取后立即迁移为加密存储。
+    if (plaintext) saveCredentials(path, store);
     return store;
 }
 
@@ -150,7 +175,19 @@ void saveCredentials(const std::string& path, const CredentialStore& store) {
         sites[name] = item;
     }
     raw["sites"] = sites;
-    writeFile(path, raw.dump(2));
+
+    const MasterKeyInfo info = loadOrCreateMasterKey(fs::path(path).parent_path().string());
+    writeFile(path, crypto::seal(info.key, raw.dump(2)));
+    // 加密后仅本人可读写。
+#ifndef _WIN32
+    ::chmod(path.c_str(), S_IRUSR | S_IWUSR);
+#endif
+}
+
+std::string masterKeySource(const std::string& configDir) {
+    MasterKeyInfo info;
+    if (!tryLoadMasterKey(configDir, &info)) return {};
+    return info.source;
 }
 
 std::string normalizeBaseUrl(const std::string& url) {

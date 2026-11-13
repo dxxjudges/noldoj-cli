@@ -179,6 +179,30 @@ def main():
         proc = run_cli(binary, config_dir, ["config", "path"])
         assert proc.returncode == 0, proc.stderr
         assert "config.json" in proc.stdout and "credentials.json" in proc.stdout, proc.stdout
+        assert "主密钥" in proc.stdout, proc.stdout
+
+    def test_credentials_encrypted():
+        secret = "tok-9f3a7c1d5e8b2a4f"
+        enc_dir = tempfile.mkdtemp(prefix="noldoj-cli-enc-")
+        proc = run_cli(binary, enc_dir, ["site", "add", "--name", "enc", "--url", site + "/api/v1",
+                                         "--token", secret])
+        assert proc.returncode == 0, proc.stderr
+
+        cred_path = os.path.join(enc_dir, "credentials.json")
+        with open(cred_path, "r", encoding="utf-8") as handle:
+            content = handle.read()
+        assert secret not in content, "私人令牌不应以明文出现在 credentials.json 中"
+        assert '"ct"' in content and '"mac"' in content, content
+
+        key_file = os.path.join(enc_dir, "master.key")
+        if os.path.exists(key_file):
+            with open(key_file, "r", encoding="utf-8") as handle:
+                key_text = handle.read().strip()
+            assert len(key_text) == 32, "回退主密钥文件应为 32 位十六进制（128 位）"
+
+        listed = run_cli(binary, enc_dir, ["site", "list"])
+        assert listed.returncode == 0, listed.stderr
+        assert "enc" in listed.stdout and "[私人令牌]" in listed.stdout, listed.stdout
 
     check("--version 输出版本号", test_version)
     check("help api 显示用法", test_help_api)
@@ -189,6 +213,7 @@ def main():
     check("api --input 读取标准输入", test_api_stdin_body)
     check("api 404 错误处理", test_api_error)
     check("config path 输出配置目录", test_config_path)
+    check("凭据加密存储与解密读取", test_credentials_encrypted)
 
     server.shutdown()
 

@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "cli/handlers.hpp"
+#include "core/keyring.hpp"
 #include "core/url.hpp"
 #include "json.hpp"
 
@@ -306,7 +307,11 @@ Runtime buildRuntime(const GlobalOptions& opts, bool needSite) {
 
     std::string created;
     rt.config = loadConfig(rt.configPath, true, &created);
-    if (!created.empty()) std::cerr << "已创建默认配置文件: " << created << "\n";
+    if (!created.empty()) {
+        std::cerr << "已创建默认配置文件: " << created << "\n";
+        // 首次启动即生成 128 位随机主密钥，写入系统凭据库（不可用时回退到本机文件）。
+        std::cerr << "已生成凭据加密主密钥（" << loadOrCreateMasterKey(dir).source << "）\n";
+    }
     rt.credentials = loadCredentials(rt.credentialsPath);
 
     if (!needSite) return rt;
@@ -804,7 +809,10 @@ int cmdConfigShow(Runtime& rt, const Args& args) {
 
 int cmdConfigPath(Runtime& rt, const Args& args) {
     std::cout << "配置文件: " << rt.configPath << "\n";
-    std::cout << "凭证文件: " << rt.credentialsPath << "\n";
+    std::cout << "凭证文件: " << rt.credentialsPath << "（已加密）\n";
+    const std::string keySource = masterKeySource(fs::path(rt.configPath).parent_path().string());
+    std::cout << "主密钥: " << (keySource.empty() ? "尚未生成（首次保存凭据时创建）" : keySource) << "\n";
+    std::cout << "系统凭据库: " << systemKeyringName() << "\n";
     return 0;
 }
 
