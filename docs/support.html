@@ -67,7 +67,7 @@
 
 <main class="wrap">
   <h1>平台支持</h1>
-  <p class="lead">NoldOJ CLI 使用 C++17 编写，网络层按平台选择：Windows 使用系统 WinHTTP，Linux 与 Android Termux 使用 libcurl。</p>
+  <p class="lead">NoldOJ CLI 使用 C++17 编写，网络层按平台选择：Windows 使用系统 WinHTTP，Linux、macOS 与 Android Termux 使用 libcurl。</p>
 
   <section>
     <h2>支持矩阵</h2>
@@ -76,17 +76,19 @@
         <tr><th>平台</th><th>架构</th><th>HTTP 实现</th><th>状态</th></tr>
       </thead>
       <tbody>
-        <tr><td>Windows</td><td>x64</td><td>WinHTTP / Schannel</td><td class="ok">已构建并测试</td></tr>
+        <tr><td>Windows</td><td>x64</td><td>WinHTTP / Schannel</td><td class="ok">发布构建 · 已测试</td></tr>
         <tr><td>Windows</td><td>x86</td><td>WinHTTP / Schannel</td><td class="ok">发布构建</td></tr>
-        <tr><td>Windows</td><td>arm64</td><td>WinHTTP / Schannel</td><td class="ok">源码支持</td></tr>
-        <tr><td>Linux</td><td>x64</td><td>libcurl</td><td class="ok">已构建并测试</td></tr>
-        <tr><td>Linux</td><td>x86</td><td>libcurl</td><td class="ok">源码支持</td></tr>
-        <tr><td>Linux</td><td>arm64</td><td>libcurl</td><td class="ok">源码支持</td></tr>
-        <tr><td>Android (Termux)</td><td>arm64</td><td>libcurl</td><td class="ok">源码支持</td></tr>
+        <tr><td>Windows</td><td>arm64</td><td>WinHTTP / Schannel</td><td class="ok">发布构建</td></tr>
+        <tr><td>Linux</td><td>x64</td><td>libcurl</td><td class="ok">发布构建 · 已测试</td></tr>
+        <tr><td>Linux</td><td>x86</td><td>libcurl</td><td class="ok">发布构建</td></tr>
+        <tr><td>Linux</td><td>arm64</td><td>libcurl</td><td class="ok">发布构建</td></tr>
+        <tr><td>macOS</td><td>x64</td><td>libcurl（系统）</td><td class="ok">发布构建</td></tr>
+        <tr><td>macOS</td><td>arm64</td><td>libcurl（系统）</td><td class="ok">发布构建</td></tr>
+        <tr><td>Android (Termux)</td><td>arm64</td><td>libcurl</td><td class="ok">源码编译（或静态二进制）</td></tr>
       </tbody>
     </table>
     <h3>已验证的环境</h3>
-    <p>CI 在 GitHub Actions 上使用 <code>ubuntu-latest</code>（Linux x64）和 <code>windows-latest</code>（Windows x64）编译并执行端到端测试；Linux x64 的 libcurl 传输也已在 WSL 中完成功能验证。</p>
+    <p>CI 在 GitHub Actions 上使用 <code>ubuntu-24.04</code>（Linux x64）和 <code>windows-2022</code>（Windows x64）编译并执行端到端测试；其余平台在发布时构建，不运行测试。</p>
   </section>
 
   <section>
@@ -96,6 +98,7 @@
       <tbody>
         <tr><td>Windows</td><td>CMake ≥ 3.16、Ninja 或 Visual Studio、C++17 编译器</td><td>无（系统 WinHTTP）</td></tr>
         <tr><td>Linux</td><td>CMake、Ninja、g++、<code>libcurl4-openssl-dev</code></td><td>libcurl（发行版通常已安装）</td></tr>
+        <tr><td>macOS</td><td>CMake、Ninja、Xcode Command Line Tools</td><td>系统自带 libcurl（无需安装）</td></tr>
         <tr><td>Termux</td><td><code>pkg install cmake ninja libcurl pkg-config</code></td><td>libcurl</td></tr>
       </tbody>
     </table>
@@ -117,13 +120,32 @@ cmake -S main -B build -G "Visual Studio 17 2022" -A ARM64
 cmake --build build --config Release</pre>
 
     <h3>Linux x64 / x86 / arm64</h3>
-<pre><span class="cmt"># x64</span>
+<pre><span class="cmt"># x64 / arm64（原生，自动链接 libcurl）</span>
 cmake -S main -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 
 <span class="cmt"># arm64 交叉编译</span>
 cmake -S main -B build -G Ninja \
-  -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++</pre>
+  -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
+
+<span class="cmt"># x86（32 位）交叉编译</span>
+cmake -S main -B build -G Ninja \
+  -DCMAKE_CXX_COMPILER=i686-linux-gnu-g++</pre>
+
+    <h3>macOS x64 / arm64</h3>
+<pre><span class="cmt"># 本机架构（Apple Silicon 为 arm64，Intel 为 x64）</span>
+cmake -S main -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+
+<span class="cmt"># 指定架构</span>
+cmake -S main -B build -G Ninja \
+  -DCMAKE_OSX_ARCHITECTURES=arm64
+cmake -S main -B build-x64 -G Ninja \
+  -DCMAKE_OSX_ARCHITECTURES=x86_64
+
+<span class="cmt"># 使用 Homebrew 的 curl（可选）</span>
+cmake -S main -B build -G Ninja -DCMAKE_PREFIX_PATH=$(brew --prefix curl)</pre>
+    <div class="callout">macOS 系统自带 libcurl 与头文件（位于 Xcode Command Line Tools 的 SDK 中），通常无需额外安装依赖。</div>
 
     <h3>Android / Termux（arm64）</h3>
 <pre>pkg install cmake ninja libcurl pkg-config
@@ -143,6 +165,27 @@ cmake --build build</pre>
 <pre>python tests/run_tests.py build/noldoj
 python tests/run_tests.py build/noldoj.exe   <span class="cmt"># Windows</span></pre>
     <p>覆盖范围：版本输出、帮助信息、<code>auth tokeninfo</code>、查询参数、JSON 请求体、自定义请求头、<code>--include</code>、stdin 请求体、404 错误处理与配置路径。</p>
+  </section>
+
+  <section>
+    <h2>发布</h2>
+    <p>当提交信息为 <code>build X.Y.Z</code> 时自动触发发布，发布说明收录自上一个 Release 以来的全部提交信息。</p>
+<pre>git commit --allow-empty -m "build 1.0.1"
+git push</pre>
+    <table>
+      <thead><tr><th>产物</th><th>平台</th><th>是否测试</th></tr></thead>
+      <tbody>
+        <tr><td><code>noldoj-linux-x64</code></td><td>Linux x64</td><td class="ok">是</td></tr>
+        <tr><td><code>noldoj-linux-arm64</code></td><td>Linux arm64</td><td>否</td></tr>
+        <tr><td><code>noldoj-linux-x86</code></td><td>Linux x86（i386 容器构建）</td><td>否</td></tr>
+        <tr><td><code>noldoj-windows-x64.exe</code></td><td>Windows x64（MinGW 静态链接）</td><td class="ok">是</td></tr>
+        <tr><td><code>noldoj-windows-x86.exe</code></td><td>Windows x86（MinGW 静态链接）</td><td>否</td></tr>
+        <tr><td><code>noldoj-windows-arm64.exe</code></td><td>Windows arm64（MSVC）</td><td>否</td></tr>
+        <tr><td><code>noldoj-macos-arm64</code></td><td>macOS arm64</td><td>否</td></tr>
+        <tr><td><code>noldoj-macos-x64</code></td><td>macOS x64</td><td>否</td></tr>
+        <tr><td><code>noldoj-android-arm64</code></td><td>Android / Termux（静态 musl，尽力而为）</td><td>否</td></tr>
+      </tbody>
+    </table>
   </section>
 
   <section>

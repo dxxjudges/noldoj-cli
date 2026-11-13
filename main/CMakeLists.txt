@@ -12,6 +12,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 #   Windows arm64   : cmake -S . -B build -G "Visual Studio 17 2022" -A ARM64
 #   Linux x86/x64   : cmake -S . -B build -G Ninja            （自动链接 libcurl）
 #   Linux arm64     : cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
+#   macOS x64/arm64 : cmake -S . -B build -G Ninja            （使用系统 libcurl）
+#                     如使用 Homebrew 的 curl：-DCMAKE_PREFIX_PATH=$(brew --prefix curl)
 #   Android/Termux  : pkg install cmake ninja libcurl pkg-config
 #                     cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH=$PREFIX
 #                     （arm64 原生编译）

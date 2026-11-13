@@ -4,16 +4,26 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "版本号（如 1.0.1）；留空则使用最新提交中的 build X.Y.Z"
+        required: false
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  release:
-    name: 构建并发布
+  prepare:
+    name: 解析版本
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'build ')
     runs-on: ubuntu-latest
-
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - name: 检出代码（含全部历史与标签）
         uses: actions/checkout@v4
@@ -25,58 +35,239 @@ jobs:
         id: version
         run: |
           set -euo pipefail
-          message="$(git log -1 --pretty=%s)"
-          if [[ ! "$message" =~ ^build\ ([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            echo "::error::提交信息必须为 'build X.Y.Z'，当前为: $message"
-            exit 1
+          version="${{ inputs.version }}"
+          if [[ -z "$version" ]]; then
+            message="$(git log -1 --pretty=%s)"
+            if [[ ! "$message" =~ ^build\ ([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              echo "::error::提交信息必须为 'build X.Y.Z'，当前为: $message"
+              exit 1
+            fi
+            version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
           fi
-          version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
           echo "发布版本: v$version"
 
-      - name: 安装构建依赖
+  # ---------- Linux：x64 与 arm64 原生构建，x86 在 i386 容器内构建 ----------
+  linux:
+    name: linux-${{ matrix.arch }}
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            os: ubuntu-24.04
+            test: true
+          - arch: arm64
+            os: ubuntu-24.04-arm
+            test: false
+          - arch: x86
+            os: ubuntu-24.04
+            docker_image: i386/debian:bookworm
+            test: false
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装依赖
+        if: ${{ !matrix.docker_image }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build libcurl4-openssl-dev \
-            g++-mingw-w64-x86-64 g++-mingw-w64-i686
+          sudo apt-get install -y ninja-build libcurl4-openssl-dev
 
-      - name: 构建 Linux x64
+      - name: 构建（原生）
+        if: ${{ !matrix.docker_image }}
         run: |
-          cmake -S main -B build-linux -G Ninja -DCMAKE_BUILD_TYPE=Release
-          cmake --build build-linux
+          cmake -S main -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          mkdir -p dist
+          cp build/noldoj "dist/noldoj-linux-${{ matrix.arch }}"
+          chmod +x "dist/noldoj-linux-${{ matrix.arch }}"
+          file "dist/noldoj-linux-${{ matrix.arch }}"
 
-      - name: 测试 Linux x64
-        run: python3 tests/run_tests.py build-linux/noldoj
-
-      - name: 构建 Windows x64（MinGW 静态链接）
+      - name: 构建（i386 容器）
+        if: ${{ matrix.docker_image }}
         run: |
-          cmake -S main -B build-win64 -G Ninja \
-            -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
-            -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
-            -DCMAKE_SYSTEM_NAME=Windows \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_EXE_LINKER_FLAGS=-static
-          cmake --build build-win64
+          docker run --rm -v "$PWD:/src" -w /src "${{ matrix.docker_image }}" bash -c '
+            set -euo pipefail
+            apt-get update
+            apt-get install -y --no-install-recommends build-essential cmake ninja-build libcurl4-openssl-dev ca-certificates
+            cmake -S main -B build-x86 -G Ninja -DCMAKE_BUILD_TYPE=Release
+            cmake --build build-x86
+            mkdir -p dist
+            cp build-x86/noldoj dist/noldoj-linux-x86
+            chmod +x dist/noldoj-linux-x86
+            file dist/noldoj-linux-x86
+          '
 
-      - name: 构建 Windows x86（MinGW 静态链接）
+      - name: 测试（仅 Linux x64）
+        if: matrix.test
+        run: python3 tests/run_tests.py "dist/noldoj-linux-${{ matrix.arch }}"
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: noldoj-linux-${{ matrix.arch }}
+          path: dist/noldoj-linux-${{ matrix.arch }}
+          if-no-files-found: error
+
+  # ---------- Windows：x64/x86 用 MinGW，arm64 用原生 MSVC ----------
+  windows:
+    name: windows-${{ matrix.arch }}
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            os: windows-2022
+            msystem: MINGW64
+            test: true
+          - arch: x86
+            os: windows-2022
+            msystem: MINGW32
+            test: false
+          - arch: arm64
+            os: windows-11-arm
+            test: false
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 MSYS2 / MinGW-w64
+        if: ${{ matrix.msystem }}
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: false
+          install: >-
+            ${{ matrix.msystem == 'MINGW64' && 'mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja' || 'mingw-w64-i686-gcc mingw-w64-i686-cmake mingw-w64-i686-ninja' }}
+
+      - name: 构建（MinGW）
+        if: ${{ matrix.msystem }}
+        shell: msys2 {0}
         run: |
-          cmake -S main -B build-win32 -G Ninja \
-            -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
-            -DCMAKE_CXX_COMPILER=i686-w64-mingw32-g++ \
-            -DCMAKE_SYSTEM_NAME=Windows \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_EXE_LINKER_FLAGS=-static
-          cmake --build build-win32
+          cmake -S main -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake --build build
+          mkdir -p dist
+          cp build/noldoj.exe "dist/noldoj-windows-${{ matrix.arch }}.exe"
+
+      - name: 构建（Windows arm64 / MSVC）
+        if: ${{ !matrix.msystem }}
+        run: |
+          cmake -S main -B build -G "Visual Studio 17 2022" -A ARM64
+          cmake --build build --config Release
+          mkdir dist
+          copy build\Release\noldoj.exe dist\noldoj-windows-arm64.exe
+
+      - name: 测试（仅 Windows x64）
+        if: matrix.test
+        run: python tests/run_tests.py "dist/noldoj-windows-${{ matrix.arch }}.exe"
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: noldoj-windows-${{ matrix.arch }}
+          path: dist/noldoj-windows-${{ matrix.arch }}.exe
+          if-no-files-found: error
+
+  # ---------- macOS：同一 runner 上分别产出 arm64 与 x64 ----------
+  macos:
+    name: macos
+    needs: prepare
+    runs-on: macos-14
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 构建 arm64 与 x64
+        run: |
+          set -euxo pipefail
+          for arch in arm64 x86_64; do
+            cmake -S main -B "build-$arch" -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_OSX_ARCHITECTURES="$arch"
+            cmake --build "build-$arch"
+          done
+          mkdir -p dist
+          cp build-arm64/noldoj dist/noldoj-macos-arm64
+          cp build-x86_64/noldoj dist/noldoj-macos-x64
+          chmod +x dist/noldoj-macos-*
+          file dist/noldoj-macos-*
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: noldoj-macos
+          path: dist/noldoj-macos-*
+          if-no-files-found: error
+
+  # ---------- Android / Termux：静态 musl aarch64，尽力而为 ----------
+  android:
+    name: android-arm64
+    needs: prepare
+    runs-on: ubuntu-24.04
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 启用 QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: 构建静态 aarch64 二进制
+        id: build
+        continue-on-error: true
+        run: |
+          docker run --rm --platform linux/arm64 -v "$PWD:/src" -w /src alpine:3.20 sh -c '
+            set -euxo pipefail
+            apk add --no-cache build-base cmake ninja curl-dev openssl-dev zlib-dev brotli-dev zstd-dev
+            cmake -S main -B build-android -G Ninja -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_EXE_LINKER_FLAGS="-static"
+            cmake --build build-android
+            mkdir -p dist
+            cp build-android/noldoj dist/noldoj-android-arm64
+            chmod +x dist/noldoj-android-arm64
+            file dist/noldoj-android-arm64
+          '
+
+      - name: 上传产物
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: noldoj-android-arm64
+          path: dist/noldoj-android-arm64
+          if-no-files-found: ignore
+
+  # ---------- 汇总并发布 ----------
+  publish:
+    name: 创建 Release
+    needs: [prepare, linux, windows, macos, android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码（含全部历史与标签）
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: 下载全部平台产物
+        uses: actions/download-artifact@v4
+        with:
+          pattern: noldoj-*
+          path: dist
+          merge-multiple: true
 
       - name: 整理发布产物
         run: |
           set -euo pipefail
-          mkdir -p dist
-          cp build-linux/noldoj dist/noldoj-linux-x64
-          cp build-win64/noldoj.exe dist/noldoj-windows-x64.exe
-          cp build-win32/noldoj.exe dist/noldoj-windows-x86.exe
-          chmod +x dist/noldoj-linux-x64
+          chmod +x dist/noldoj-linux-* dist/noldoj-macos-* 2>/dev/null || true
           ls -lh dist
 
       - name: 生成发布说明（自上次 Release 以来的全部提交）
@@ -97,6 +288,10 @@ jobs:
             echo
             git log "$range" --pretty=format:'- %s (%h)'
             echo
+            echo
+            echo "## 构建产物"
+            echo
+            ls dist | sed 's/^/- `/; s/$/`/'
           } > notes.md
           echo "----- notes.md -----"
           cat notes.md
@@ -106,11 +301,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          tag="${{ steps.version.outputs.tag }}"
-          gh release create "$tag" \
-            dist/noldoj-linux-x64 \
-            dist/noldoj-windows-x64.exe \
-            dist/noldoj-windows-x86.exe \
+          tag="${{ needs.prepare.outputs.tag }}"
+          gh release create "$tag" dist/* \
             --title "NoldOJ CLI $tag" \
             --target "$GITHUB_SHA" \
             --notes-file notes.md \
