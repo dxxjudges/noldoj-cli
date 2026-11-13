@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NoldOJ CLI — 跨平台 OJ 命令行客户端</title>
-<meta name="description" content="NoldOJ CLI 是 NoldOJ 评测平台的跨平台命令行客户端，支持 Windows、Linux 与 Android Termux，并可直接调用任意 API。">
+<meta name="description" content="NoldOJ CLI 是 NoldOJ 评测平台的跨平台命令行客户端，配置站点与私人令牌后即可在终端刷题出题；支持 Windows、Linux、macOS 与 Android Termux，并可直接调用任意 API。">
 <style>
   :root {
     --bg: #080d1a;
@@ -117,6 +117,24 @@
   .card h3 { margin: 0 0 8px; font-size: 16.5px; }
   .card p { margin: 0; color: var(--muted); font-size: 14px; }
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .note {
+    margin-top: 18px;
+    border: 1px solid rgba(52, 211, 164, 0.28);
+    background: rgba(52, 211, 164, 0.06);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+  }
+  .note strong { display: block; margin-bottom: 6px; color: #b7f0db; font-size: 15px; }
+  .note p { margin: 6px 0 0; color: var(--muted); font-size: 13.8px; }
+  .note code {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12.8px;
+    background: rgba(52, 211, 164, 0.10);
+    border: 1px solid rgba(52, 211, 164, 0.18);
+    border-radius: 5px;
+    padding: 1px 5px;
+    color: #cfeee4;
+  }
   .step { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
   .step-no { font-family: ui-monospace, Consolas, monospace; color: var(--accent); font-size: 13px; font-weight: 700; letter-spacing: 1px; }
   .step h3 { margin: 8px 0 10px; font-size: 16px; }
@@ -159,8 +177,8 @@
   <section class="hero">
     <div>
       <span class="pill"><span class="dot"></span> Windows / Linux / macOS / Android Termux</span>
-      <h1>把整个评测平台<br><span>装进终端</span></h1>
-      <p class="lead">NoldOJ CLI 是 NoldOJ 评测平台的跨平台命令行客户端。管理题目、提交代码、打比赛，或者像 <code>gh api</code> 一样直接请求任意接口。</p>
+      <h1>在终端里<br><span>连接你的评测平台</span></h1>
+      <p class="lead">NoldOJ CLI 是 NoldOJ 评测平台的跨平台命令行客户端。它自身不包含题目或数据，需要先配置一个可访问的站点地址和私人令牌，之后才能在终端里管理题目、提交代码、打比赛，或像 <code>gh api</code> 一样直接请求该站点的任意接口。</p>
       <div class="badges">
         <span class="badge">C++17</span>
         <span class="badge">WinHTTP / libcurl</span>
@@ -264,6 +282,12 @@ cmake --build build</pre>
 noldoj problem list --page 1
 noldoj help problem</pre>
       </div>
+    </div>
+
+    <div class="note">
+      <strong>凭据存放在哪里</strong>
+      <p>站点地址写在 <code>config.json</code>，私人令牌写在 <code>credentials.json</code>，两者都在本机配置目录：Linux / macOS / Termux 为 <code>~/.noldoj-cli/</code>，Windows 为 <code>%USERPROFILE%\.noldoj-cli\</code>。</p>
+      <p>令牌以明文保存，不会上传到任何地方。用 <code>noldoj config path</code> 查看实际路径；该目录不要提交到版本库，也不要在共享机器上长期保留。临时使用可用 <code>--access-token</code> 覆盖而不落盘。</p>
     </div>
   </section>
 
