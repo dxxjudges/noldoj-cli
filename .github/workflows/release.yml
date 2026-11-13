@@ -159,16 +159,20 @@ jobs:
 
       - name: 构建（Windows arm64 / llvm-mingw）
         if: ${{ !matrix.msystem }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y ninja-build file curl jq
-          url="$(curl -sSL https://api.github.com/repos/mstorsjo/llvm-mingw/releases/latest \
-            | jq -r '.assets[].browser_download_url' | grep 'ucrt-ubuntu' | head -1)"
+          sudo apt-get install -y ninja-build file
+          # 只取宿主机为 x86_64 的发行包（aarch64 宿主的包无法在 runner 上运行）
+          url="$(gh api repos/mstorsjo/llvm-mingw/releases/latest \
+            --jq '.assets[].browser_download_url' | grep 'ucrt-ubuntu' | grep 'x86_64' | head -1)"
           echo "使用 llvm-mingw: $url"
           curl -sSL "$url" -o llvm-mingw.tar.xz
           tar xf llvm-mingw.tar.xz
-          export PATH="$PWD/$(ls -d llvm-mingw-*)/bin:$PATH"
+          export PATH="$PWD/$(ls -d llvm-mingw-*-x86_64)/bin:$PATH"
+          aarch64-w64-mingw32-clang++ --version
           cmake -S main -B build-arm64 -G Ninja \
             -DCMAKE_SYSTEM_NAME=Windows \
             -DCMAKE_C_COMPILER=aarch64-w64-mingw32-clang \
