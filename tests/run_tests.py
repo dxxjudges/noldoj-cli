@@ -16,6 +16,14 @@ import tempfile
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+# 控制台可能不是 UTF-8（例如 Windows 上的 cp1252），统一改成 UTF-8 并容错，
+# 避免中文测试名在输出时抛出 UnicodeEncodeError。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 
 class EchoHandler(BaseHTTPRequestHandler):
     server_version = "noldoj-test"
