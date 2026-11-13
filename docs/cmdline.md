@@ -10,6 +10,7 @@
 
 - [基本用法](#基本用法)
 - [全局选项](#全局选项)
+- [认证与私人令牌](#认证与私人令牌)
 - [输出与退出码](#输出与退出码)
 - [命令分组总览](#命令分组总览)
 - [命令参考](#命令参考)
@@ -28,8 +29,8 @@ noldoj api <路径> [选项]
 示例：
 
 ```bash
-# 添加一个站点（使用私人令牌 Personal Access Token）
-noldoj site add --name main --url https://oj.example.com --token "pat_xxx"
+# 添加一个站点（令牌在网页端「令牌」设置页创建，明文只显示一次）
+noldoj site add --name main --url https://oj.example.com --token "noldoj_pat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 # 查看当前令牌信息
 noldoj auth tokeninfo
@@ -58,7 +59,7 @@ noldoj --version           # 显示版本号
 | 选项 | 说明 |
 | --- | --- |
 | `--site <name\|url>` | 选择站点。可填配置中的站点名，也可直接写完整 URL（如 `https://oj.example.com`） |
-| `--access-token <token>` | 本次调用临时覆盖私人令牌，不写入本地配置 |
+| `--access-token <token>` | 本次调用临时覆盖私人令牌，不写入本地配置；值为 `noldoj_pat_...`，首尾空白会被自动去除 |
 | `--config-dir <path>` | 覆盖配置目录（默认 `~/.noldoj-cli`，Windows 为 `%USERPROFILE%\.noldoj-cli`） |
 | `--body-json <json>` | 直接指定请求体 JSON，可与命令的字段选项合并 |
 | `--body-json-file <file>` | 从文件读取请求体 JSON |
@@ -69,6 +70,22 @@ noldoj --version           # 显示版本号
 | `-y, --yes` | 对需要确认的破坏性操作直接确认 |
 | `-h, --help` | 显示帮助 |
 | `-v, --version` | 显示版本号 |
+
+---
+
+## 认证与私人令牌
+
+CLI 只使用私人访问令牌（Personal Access Token，PAT）作为凭据，不提供用户名/密码登录，也不处理 refresh token。
+
+- 令牌格式为 `noldoj_pat_` + 32 位 base64url 字符，在网页端「令牌」设置页创建；明文只在创建时返回一次。
+- 创建时指定有效期（最长 3650 天，`0` 表示永久）与权限范围：`read` / `submit` / `write` / `account`。
+- 权限不足返回 403；令牌过期、被吊销或账号被封禁时请求会被拒绝。
+- 令牌的创建与吊销只能在网页端「令牌」页完成（这些接口拒绝 PAT），CLI 没有对应子命令。
+- 以下接口只允许登录会话（JWT），私人令牌无法调用，CLI 会在本地直接报错并提示改用网页端：
+  - `auth change-password`
+  - `user sudo-login`
+  - `user reset-password`
+- `--access-token` 用于临时覆盖已保存的 PAT。若传入网页登录得到的 JWT，仅 GET 等只读请求可用；写请求会被服务端的 CSRF 防护拒绝。
 
 ---
 
@@ -125,7 +142,7 @@ noldoj --version           # 显示版本号
 | `auth send-code` | 发送邮箱验证码 |
 | `auth verify-code` | 校验邮箱验证码 |
 | `auth email-enabled` | 查询邮箱功能是否启用 |
-| `auth change-password` | 修改密码 |
+| `auth change-password` | 修改密码（仅网页端可用：该接口拒绝私人令牌） |
 | `auth forgot-password` | 申请重置密码 |
 | `auth reset-password` | 校验验证码并重置密码 |
 | `auth status` | 查看当前站点令牌状态（本地） |
@@ -245,12 +262,12 @@ noldoj --version           # 显示版本号
 | `user my-virtual-contests` | 我的虚拟比赛 |
 | `user profile` | 公开用户资料 |
 | `user rating` | Rating 排行榜 |
-| `user sudo-login` | 免密登录指定用户（su） |
+| `user sudo-login` | 免密登录指定用户（su；仅网页端可用：该接口拒绝私人令牌） |
 | `user role` | 修改角色（su） |
 | `user ban` | 封禁用户 |
 | `user unban` | 解封用户 |
 | `user force-logout` | 强制登出 |
-| `user reset-password` | 重置密码（su） |
+| `user reset-password` | 重置密码（su；仅网页端可用：该接口拒绝私人令牌） |
 | `user set-rating` | 修改 Rating（su） |
 | `user hide-rating` | 切换隐藏 Rating |
 | `user upload-limits` | 设置上传限制（su） |

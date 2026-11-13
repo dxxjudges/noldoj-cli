@@ -157,7 +157,7 @@ python tests/run_tests.py build/noldoj.exe   <span class="cmt"># Windows</span><
     </details>
     <details>
       <summary>接口返回 401 / 403</summary>
-      <p>使用 <code>noldoj auth tokeninfo</code> 检查令牌类型、权限范围与到期时间。私人令牌需要具备对应 scope：读取需要 read，提交需要 submit，写操作需要 write。</p>
+      <p>使用 <code>noldoj auth tokeninfo</code> 检查令牌类型、权限范围与到期时间。私人令牌需要具备对应 scope：读取需要 read，提交需要 submit，写操作需要 write，修改本人资料等 <code>/users/me</code> 写操作需要 account。此外 <code>auth change-password</code>、<code>user sudo-login</code>、<code>user reset-password</code> 只接受登录会话（JWT），私人令牌无法调用，CLI 会在本地直接提示改用网页端。</p>
     </details>
     <details>
       <summary>Termux 中无法找到 libcurl</summary>

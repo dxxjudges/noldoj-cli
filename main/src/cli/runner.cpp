@@ -159,6 +159,14 @@ bool isTerminalRunStatus(const std::string& status) {
     return kNonFinal.count(status) == 0;
 }
 
+// 后端仅允许登录会话（JWT）调用、明确拒绝私人令牌的接口。
+// CLI 只持有私人令牌，调用必然 403，因此在本地直接给出明确提示。
+bool isSessionOnlyCommand(const std::string& group, const std::string& name) {
+    static const std::set<std::string> kSessionOnly = {
+        "auth/change-password", "user/sudo-login", "user/reset-password"};
+    return kSessionOnly.count(group + "/" + name) > 0;
+}
+
 // ---------- 参数解析 ----------
 
 struct Invocation {
@@ -307,7 +315,8 @@ Runtime buildRuntime(const GlobalOptions& opts, bool needSite) {
     rt.credential = &rt.credentials.sites[rt.site.base_url];
 
     if (!opts.token.empty()) {
-        rt.tokens = makeStaticTokenProvider(opts.token);
+        // 与服务端一致：去掉首尾空白，避免 `Bearer <token>\n` 导致鉴权失败
+        rt.tokens = makeStaticTokenProvider(trim(opts.token));
     } else {
         rt.tokens = makeStoredTokenProvider(*rt.credential, [&rt]() { rt.persistCredentials(); });
     }
@@ -589,7 +598,7 @@ int cmdAuthStatus(Runtime& rt, const Args& args) {
 }
 
 int cmdSetToken(Runtime& rt, const Args& args) {
-    std::string token = args.get("token");
+    std::string token = trim(args.get("token"));
     if (!args.get("token-file").empty()) token = trim(readTextFile(args.get("token-file")));
     if (token.empty()) token = promptLine("私人令牌: ");
     if (token.empty()) throw std::runtime_error("私人令牌不能为空");
@@ -1056,6 +1065,12 @@ int run(int argc, char** argv) {
         if (inv.help) {
             printHelp(spec->group);
             return 0;
+        }
+
+        if (isSessionOnlyCommand(spec->group, spec->name)) {
+            std::cerr << "错误: `" << spec->group << " " << spec->name
+                      << "` 仅允许登录会话（JWT）调用，私人令牌无法使用；请在网页端完成该操作。\n";
+            return 1;
         }
 
         const bool needSite = !(spec->group == "site" || spec->group == "config");
