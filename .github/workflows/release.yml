@@ -249,7 +249,7 @@ jobs:
       - name: 整理发布产物
         run: |
           set -euo pipefail
-          chmod +x dist/noldoj-linux-* dist/noldoj-macos-* dist/noldoj-android-* 2>/dev/null || true
+          chmod +x dist/noldoj-linux-* dist/noldoj-macos-* 2>/dev/null || true
           ls -lh dist
 
       - name: 生成发布说明（自上次 Release 以来的全部提交）
