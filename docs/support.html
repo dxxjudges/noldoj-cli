@@ -84,7 +84,7 @@
         <tr><td>Linux</td><td>arm64</td><td>libcurl</td><td class="ok">发布构建</td></tr>
         <tr><td>macOS</td><td>x64</td><td>libcurl（系统）</td><td class="ok">发布构建</td></tr>
         <tr><td>macOS</td><td>arm64</td><td>libcurl（系统）</td><td class="ok">发布构建</td></tr>
-        <tr><td>Android (Termux)</td><td>arm64</td><td>libcurl</td><td class="ok">源码编译（或静态二进制）</td></tr>
+        <tr><td>Android (Termux)</td><td>arm64</td><td>libcurl</td><td class="ok">Termux 内源码编译</td></tr>
       </tbody>
     </table>
     <h3>已验证的环境</h3>
@@ -180,12 +180,12 @@ git push</pre>
         <tr><td><code>noldoj-linux-x86</code></td><td>Linux x86（i386 容器构建）</td><td>否</td></tr>
         <tr><td><code>noldoj-windows-x64.exe</code></td><td>Windows x64（MinGW 静态链接）</td><td class="ok">是</td></tr>
         <tr><td><code>noldoj-windows-x86.exe</code></td><td>Windows x86（MinGW 静态链接）</td><td>否</td></tr>
-        <tr><td><code>noldoj-windows-arm64.exe</code></td><td>Windows arm64（MSVC）</td><td>否</td></tr>
+        <tr><td><code>noldoj-windows-arm64.exe</code></td><td>Windows arm64（llvm-mingw 静态链接）</td><td>否</td></tr>
         <tr><td><code>noldoj-macos-arm64</code></td><td>macOS arm64</td><td>否</td></tr>
         <tr><td><code>noldoj-macos-x64</code></td><td>macOS x64</td><td>否</td></tr>
-        <tr><td><code>noldoj-android-arm64</code></td><td>Android / Termux（静态 musl，尽力而为）</td><td>否</td></tr>
       </tbody>
     </table>
+    <p>Android / Termux 依赖 Termux 自身的 libcurl，无法在 CI 中交叉产出，请在 Termux 内按上面的命令从源码编译。</p>
   </section>
 
   <section>

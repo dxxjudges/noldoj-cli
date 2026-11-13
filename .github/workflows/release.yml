@@ -227,49 +227,10 @@ jobs:
           path: dist/noldoj-macos-*
           if-no-files-found: error
 
-  # ---------- Android / Termux：静态 musl aarch64，尽力而为 ----------
-  android:
-    name: android-arm64
-    needs: prepare
-    runs-on: ubuntu-24.04
-    steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
-
-      - name: 启用 QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
-      - name: 构建静态 aarch64 二进制
-        id: build
-        continue-on-error: true
-        run: |
-          docker run --rm --platform linux/arm64 -v "$PWD:/src" -w /src alpine:3.20 sh -c '
-            set -euxo pipefail
-            apk add --no-cache build-base cmake ninja curl-dev curl-static openssl-dev
-            cmake -S main -B build-android -G Ninja -DCMAKE_BUILD_TYPE=Release \
-              -DCURL_USE_STATIC_LIBS=ON \
-              -DCMAKE_EXE_LINKER_FLAGS="-static"
-            cmake --build build-android
-            mkdir -p dist
-            cp build-android/noldoj dist/noldoj-android-arm64
-            chmod +x dist/noldoj-android-arm64
-            file dist/noldoj-android-arm64
-          '
-
-      - name: 上传产物
-        if: steps.build.outcome == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: noldoj-android-arm64
-          path: dist/noldoj-android-arm64
-          if-no-files-found: ignore
-
   # ---------- 汇总并发布 ----------
   publish:
     name: 创建 Release
-    needs: [prepare, linux, windows, macos, android]
+    needs: [prepare, linux, windows, macos]
     runs-on: ubuntu-24.04
     steps:
       - name: 检出代码（含全部历史与标签）
