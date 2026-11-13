@@ -20,7 +20,7 @@ jobs:
   prepare:
     name: 解析版本
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'build ')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
@@ -76,7 +76,7 @@ jobs:
         if: ${{ !matrix.docker_image }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build libcurl4-openssl-dev
+          sudo apt-get install -y ninja-build libcurl4-openssl-dev file
 
       - name: 构建（原生）
         if: ${{ !matrix.docker_image }}
@@ -94,7 +94,7 @@ jobs:
           docker run --rm -v "$PWD:/src" -w /src "${{ matrix.docker_image }}" bash -c '
             set -euo pipefail
             apt-get update
-            apt-get install -y --no-install-recommends build-essential cmake ninja-build libcurl4-openssl-dev ca-certificates
+            apt-get install -y --no-install-recommends build-essential cmake ninja-build libcurl4-openssl-dev ca-certificates file
             cmake -S main -B build-x86 -G Ninja -DCMAKE_BUILD_TYPE=Release
             cmake --build build-x86
             mkdir -p dist
@@ -114,7 +114,7 @@ jobs:
           path: dist/noldoj-linux-${{ matrix.arch }}
           if-no-files-found: error
 
-  # ---------- Windows：x64/x86 用 MinGW，arm64 用原生 MSVC ----------
+  # ---------- Windows：x64/x86 用 MinGW 原生，arm64 用 llvm-mingw 交叉 ----------
   windows:
     name: windows-${{ matrix.arch }}
     needs: prepare
@@ -132,8 +132,8 @@ jobs:
             msystem: MINGW32
             test: false
           - arch: arm64
-            os: windows-11-arm
-            test: false
+            os: ubuntu-24.04
+            msystem: ""
 
     steps:
       - name: 检出代码
@@ -157,13 +157,29 @@ jobs:
           mkdir -p dist
           cp build/noldoj.exe "dist/noldoj-windows-${{ matrix.arch }}.exe"
 
-      - name: 构建（Windows arm64 / MSVC）
+      - name: 构建（Windows arm64 / llvm-mingw）
         if: ${{ !matrix.msystem }}
         run: |
-          cmake -S main -B build -G "Visual Studio 17 2022" -A ARM64
-          cmake --build build --config Release
-          mkdir dist
-          copy build\Release\noldoj.exe dist\noldoj-windows-arm64.exe
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y ninja-build file curl jq
+          url="$(curl -sSL https://api.github.com/repos/mstorsjo/llvm-mingw/releases/latest \
+            | jq -r '.assets[].browser_download_url' | grep 'ucrt-ubuntu' | head -1)"
+          echo "使用 llvm-mingw: $url"
+          curl -sSL "$url" -o llvm-mingw.tar.xz
+          tar xf llvm-mingw.tar.xz
+          export PATH="$PWD/$(ls -d llvm-mingw-*)/bin:$PATH"
+          cmake -S main -B build-arm64 -G Ninja \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_C_COMPILER=aarch64-w64-mingw32-clang \
+            -DCMAKE_CXX_COMPILER=aarch64-w64-mingw32-clang++ \
+            -DCMAKE_RC_COMPILER=aarch64-w64-mingw32-windres \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake --build build-arm64
+          mkdir -p dist
+          cp build-arm64/noldoj.exe dist/noldoj-windows-arm64.exe
+          file dist/noldoj-windows-arm64.exe
 
       - name: 测试（仅 Windows x64）
         if: matrix.test
@@ -180,7 +196,7 @@ jobs:
   macos:
     name: macos
     needs: prepare
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -249,7 +265,7 @@ jobs:
   publish:
     name: 创建 Release
     needs: [prepare, linux, windows, macos, android]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: 检出代码（含全部历史与标签）
         uses: actions/checkout@v4
@@ -267,7 +283,7 @@ jobs:
       - name: 整理发布产物
         run: |
           set -euo pipefail
-          chmod +x dist/noldoj-linux-* dist/noldoj-macos-* 2>/dev/null || true
+          chmod +x dist/noldoj-linux-* dist/noldoj-macos-* dist/noldoj-android-* 2>/dev/null || true
           ls -lh dist
 
       - name: 生成发布说明（自上次 Release 以来的全部提交）
