@@ -22,7 +22,7 @@ using nlohmann::json;
 namespace noldoj::crypto {
 namespace {
 
-// ---------------- AES-128（仅加密方向，供 CTR 模式使用） ----------------
+// ---------------- AES-256（仅加密方向，供 CTR 模式使用） ----------------
 
 const unsigned char kSbox[256] = {
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
@@ -44,31 +44,38 @@ const unsigned char kSbox[256] = {
 
 unsigned char xtime(unsigned char x) { return static_cast<unsigned char>((x << 1) ^ ((x & 0x80) ? 0x1b : 0x00)); }
 
-void expandKey(const Key& key, unsigned char roundKeys[176]) {
-    std::memcpy(roundKeys, key.data(), 16);
+// AES-256：Nk = 8 个字，14 轮，扩展密钥 240 字节。
+void expandKey(const Key& key, unsigned char roundKeys[240]) {
+    std::memcpy(roundKeys, key.data(), 32);
     unsigned char rcon = 0x01;
-    for (int i = 16; i < 176; i += 4) {
+    for (int i = 32; i < 240; i += 4) {
         unsigned char t[4] = {roundKeys[i - 4], roundKeys[i - 3], roundKeys[i - 2], roundKeys[i - 1]};
-        if (i % 16 == 0) {
+        if (i % 32 == 0) {
             const unsigned char first = t[0];
             t[0] = static_cast<unsigned char>(kSbox[t[1]] ^ rcon);
             t[1] = kSbox[t[2]];
             t[2] = kSbox[t[3]];
             t[3] = kSbox[first];
             rcon = xtime(rcon);
+        } else if (i % 32 == 16) {
+            // AES-256 专有：每 16 字节额外做一次 SubWord
+            t[0] = kSbox[t[0]];
+            t[1] = kSbox[t[1]];
+            t[2] = kSbox[t[2]];
+            t[3] = kSbox[t[3]];
         }
-        roundKeys[i + 0] = static_cast<unsigned char>(roundKeys[i - 16] ^ t[0]);
-        roundKeys[i + 1] = static_cast<unsigned char>(roundKeys[i - 15] ^ t[1]);
-        roundKeys[i + 2] = static_cast<unsigned char>(roundKeys[i - 14] ^ t[2]);
-        roundKeys[i + 3] = static_cast<unsigned char>(roundKeys[i - 13] ^ t[3]);
+        roundKeys[i + 0] = static_cast<unsigned char>(roundKeys[i - 32] ^ t[0]);
+        roundKeys[i + 1] = static_cast<unsigned char>(roundKeys[i - 31] ^ t[1]);
+        roundKeys[i + 2] = static_cast<unsigned char>(roundKeys[i - 30] ^ t[2]);
+        roundKeys[i + 3] = static_cast<unsigned char>(roundKeys[i - 29] ^ t[3]);
     }
 }
 
-void encryptBlock(const unsigned char roundKeys[176], const unsigned char in[16], unsigned char out[16]) {
+void encryptBlock(const unsigned char roundKeys[240], const unsigned char in[16], unsigned char out[16]) {
     unsigned char s[16];
     for (int i = 0; i < 16; ++i) s[i] = static_cast<unsigned char>(in[i] ^ roundKeys[i]);
 
-    for (int round = 1; round <= 10; ++round) {
+    for (int round = 1; round <= 14; ++round) {
         for (int i = 0; i < 16; ++i) s[i] = kSbox[s[i]];
 
         unsigned char t = s[1];
@@ -88,7 +95,7 @@ void encryptBlock(const unsigned char roundKeys[176], const unsigned char in[16]
         s[7] = s[3];
         s[3] = t;
 
-        if (round != 10) {
+        if (round != 14) {
             for (int c = 0; c < 4; ++c) {
                 unsigned char* col = s + c * 4;
                 const unsigned char a0 = col[0], a1 = col[1], a2 = col[2], a3 = col[3];
@@ -105,7 +112,7 @@ void encryptBlock(const unsigned char roundKeys[176], const unsigned char in[16]
 }
 
 std::string ctrCrypt(const Key& key, const std::array<unsigned char, 16>& iv, const std::string& input) {
-    unsigned char roundKeys[176];
+    unsigned char roundKeys[240];
     expandKey(key, roundKeys);
 
     unsigned char counter[16];
@@ -305,9 +312,9 @@ std::string keyToHex(const Key& key) {
 }
 
 bool keyFromHex(const std::string& hex, Key* out) {
-    if (hex.size() != 32) return false;
+    if (hex.size() != 64) return false;
     Key key{};
-    for (std::size_t i = 0; i < 16; ++i) {
+    for (std::size_t i = 0; i < key.size(); ++i) {
         int high = -1;
         int low = -1;
         for (int nibble = 0; nibble < 2; ++nibble) {
@@ -346,7 +353,7 @@ std::string hmacSha256(const std::string& key, const std::string& data) {
     return sha256Raw(reinterpret_cast<const unsigned char*>(message.data()), message.size());
 }
 
-std::string aes128Ctr(const Key& key, const std::array<unsigned char, 16>& iv, const std::string& input) {
+std::string aesCtr(const Key& key, const std::array<unsigned char, 16>& iv, const std::string& input) {
     return ctrCrypt(key, iv, input);
 }
 
@@ -359,8 +366,8 @@ std::string seal(const Key& key, const std::string& plaintext) {
     const std::string mac = hmacSha256(macKeyFor(key), std::string(iv.begin(), iv.end()) + cipher);
 
     json envelope;
-    envelope["version"] = 1;
-    envelope["alg"] = "aes-128-ctr+hmac-sha256";
+    envelope["version"] = 2;
+    envelope["alg"] = "aes-256-ctr+hmac-sha256";
     envelope["iv"] = base64Encode(std::string(iv.begin(), iv.end()));
     envelope["ct"] = base64Encode(cipher);
     envelope["mac"] = base64Encode(mac);

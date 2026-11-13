@@ -15,7 +15,7 @@ struct MasterKeyInfo {
 // 读取主密钥；不存在时返回 false（不会创建）。
 bool tryLoadMasterKey(const std::string& configDir, MasterKeyInfo* out);
 
-// 读取主密钥；不存在时生成 128 位随机密钥并写入系统凭据库，
+// 读取主密钥；不存在时生成 256 位随机密钥并写入系统凭据库，
 // 凭据库不可用时回退到配置目录下权限为 0600 的 master.key 文件。
 MasterKeyInfo loadOrCreateMasterKey(const std::string& configDir);
 

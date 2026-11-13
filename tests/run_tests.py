@@ -198,7 +198,7 @@ def main():
         if os.path.exists(key_file):
             with open(key_file, "r", encoding="utf-8") as handle:
                 key_text = handle.read().strip()
-            assert len(key_text) == 32, "回退主密钥文件应为 32 位十六进制（128 位）"
+            assert len(key_text) == 64, "回退主密钥文件应为 64 位十六进制（256 位）"
 
         listed = run_cli(binary, enc_dir, ["site", "list"])
         assert listed.returncode == 0, listed.stderr

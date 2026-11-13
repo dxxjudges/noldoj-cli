@@ -309,7 +309,7 @@ Runtime buildRuntime(const GlobalOptions& opts, bool needSite) {
     rt.config = loadConfig(rt.configPath, true, &created);
     if (!created.empty()) {
         std::cerr << "已创建默认配置文件: " << created << "\n";
-        // 首次启动即生成 128 位随机主密钥，写入系统凭据库（不可用时回退到本机文件）。
+        // 首次启动即生成 256 位随机主密钥，写入系统凭据库（不可用时回退到本机文件）。
         std::cerr << "已生成凭据加密主密钥（" << loadOrCreateMasterKey(dir).source << "）\n";
     }
     rt.credentials = loadCredentials(rt.credentialsPath);
