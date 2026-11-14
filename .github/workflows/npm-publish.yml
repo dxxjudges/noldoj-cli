@@ -29,6 +29,27 @@ jobs:
             exit 1
           fi
 
+      - name: 下载发布产物到 vendor/
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          mkdir -p vendor
+          for attempt in $(seq 1 40); do
+            if gh release download "v${version}" --dir vendor --pattern 'noldoj-*' --clobber 2>/dev/null; then
+              count="$(find vendor -maxdepth 1 -type f -size +1k | wc -l)"
+              if [ "$count" -ge 8 ]; then
+                echo "已获取 ${count} 个平台产物"
+                exit 0
+              fi
+            fi
+            echo "等待 Release 产物就绪（第 ${attempt}/40 次）…"
+            sleep 15
+          done
+          echo "::error::未能获取 v${version} 的发布产物"
+          exit 1
+
       - run: npm ci
       - run: npm run build --if-present
       - run: npm test

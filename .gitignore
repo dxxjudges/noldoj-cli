@@ -25,6 +25,9 @@ tests/__pycache__/
 *.log
 *.tmp
 
+# npm 包内嵌的发布产物（发布前由 CI 下载）
+vendor/
+
 # IDE / 编辑器
 .vs/
 .vscode/

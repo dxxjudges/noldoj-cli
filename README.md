@@ -16,7 +16,7 @@ npm install -g noldoj-cli
 
 也可直接从 [Releases](https://github.com/dxxjudges/noldoj-cli/releases) 下载对应平台的二进制：Linux x64/x86/arm64、macOS x64/arm64、Windows x64/x86/arm64 均已提供。Android / Termux 请在 Termux 内从源码编译。
 
-npm 包在首次运行时才会下载对应平台的二进制，缓存在 `~/.noldoj-cli/bin/<版本>/`；可用 `NOLDOJ_CLI_CACHE` 改变缓存位置，或用 `NOLDOJ_CLI_BIN` 直接指定已有可执行文件。
+npm 包内置全部平台的二进制（Linux x64/x86/arm64、macOS x64/arm64、Windows x64/x86/arm64，约 8 MB），安装完成后即可离线运行，不需要在首次执行时联网下载；包内没有当前平台时，可用 `NOLDOJ_CLI_BIN` 指定自行编译的可执行文件。
 
 ## 快速开始
 

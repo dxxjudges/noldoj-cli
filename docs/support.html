@@ -92,6 +92,26 @@
   </section>
 
   <section>
+    <h2>最低系统要求</h2>
+    <p>依据为发布产物的二进制元数据：PE 子系统版本与导入表、<code>readelf -V</code> 符号版本、Mach-O <code>LC_BUILD_VERSION</code>。</p>
+    <table>
+      <thead>
+        <tr><th>平台</th><th>架构</th><th>最低系统</th><th>运行时依赖</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Windows</td><td>x64 / x86</td><td>Windows Vista（建议 Windows 7 SP1 及以上）</td><td>仅系统 DLL：msvcrt、winhttp、bcrypt、advapi32、shell32；不需要 VC 运行库</td></tr>
+        <tr><td>Windows</td><td>arm64</td><td>Windows 10 1709 及以上</td><td>系统 UCRT（api-ms-win-crt-*）</td></tr>
+        <tr><td>Linux</td><td>x64 / arm64</td><td>glibc ≥ 2.38：Ubuntu 23.10+ / 24.04+、Debian 13、Fedora 39+</td><td>libcurl.so.4、libstdc++.so.6（GLIBCXX 3.4.32）、libgcc_s.so.1</td></tr>
+        <tr><td>Linux</td><td>x86</td><td>glibc ≥ 2.34：Debian 12、Ubuntu 22.04+</td><td>同上（GLIBCXX 3.4.29）</td></tr>
+        <tr><td>macOS</td><td>x64 / arm64</td><td>macOS 11 Big Sur</td><td>系统 libcurl.4.dylib、libc++.1.dylib、libSystem</td></tr>
+        <tr><td>Android (Termux)</td><td>arm64</td><td>Termux 支持的 Android 7+</td><td>libcurl（<code>pkg install libcurl</code>）</td></tr>
+        <tr><td>npm 安装</td><td>以上全部</td><td>Node.js ≥ 18</td><td>包内已内置各平台二进制，安装后无需联网</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">macOS 产物以 <code>-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0</code> 构建；Linux 的 glibc 下限由 CI 构建镜像决定，需要覆盖更老的发行版请从源码编译。</div>
+  </section>
+
+  <section>
     <h2>依赖</h2>
     <table>
       <thead><tr><th>平台</th><th>构建依赖</th><th>运行时依赖</th></tr></thead>

@@ -23,12 +23,14 @@
   },
   "files": [
     "bin/",
+    "vendor/",
     "README.md"
   ],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
+    "prepublishOnly": "node scripts/check-assets.js",
     "test": "node --check bin/noldoj.js"
   }
 }
