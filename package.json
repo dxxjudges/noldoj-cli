@@ -1,0 +1,34 @@
+{
+  "name": "noldoj-cli",
+  "version": "1.1.0",
+  "description": "NoldOJ 评测平台的跨平台命令行客户端：配置站点与私人令牌后，即可在终端刷题、出题、打比赛，或直接调用任意 API",
+  "keywords": [
+    "noldoj",
+    "oj",
+    "online-judge",
+    "cli",
+    "competitive-programming"
+  ],
+  "homepage": "https://nojc.dxxj.de5.net",
+  "bugs": {
+    "url": "https://github.com/dxxjudges/noldoj-cli/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dxxjudges/noldoj-cli.git"
+  },
+  "license": "MIT",
+  "bin": {
+    "noldoj": "bin/noldoj.js"
+  },
+  "files": [
+    "bin/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --check bin/noldoj.js"
+  }
+}

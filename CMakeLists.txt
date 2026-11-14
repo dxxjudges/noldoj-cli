@@ -22,6 +22,16 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 #                       -DANDROID_ABI=arm64-v8a
 # Windows 平台使用系统自带 WinHTTP，无第三方依赖；其余平台使用 libcurl。
 
+# 版本号以 package.json 为唯一来源（发布时用 `npm version patch|minor|major` 更新）。
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/package.json")
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/package.json" NOLDOJ_PACKAGE_JSON)
+    string(REGEX MATCH "\"version\"[ \t]*:[ \t]*\"([0-9]+\\.[0-9]+\\.[0-9]+)\"" _version_match "${NOLDOJ_PACKAGE_JSON}")
+    set(NOLDOJ_VERSION "${CMAKE_MATCH_1}")
+endif()
+if(NOT NOLDOJ_VERSION)
+    set(NOLDOJ_VERSION "0.0.0")
+endif()
+
 if(WIN32)
     list(APPEND NOLDOJ_NET_SOURCE src/net/winhttp_transport.cpp)
 else()
@@ -46,6 +56,8 @@ target_include_directories(noldoj PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
+
+target_compile_definitions(noldoj PRIVATE NOLDOJ_VERSION="${NOLDOJ_VERSION}")
 
 if(WIN32)
     # advapi32: 凭据管理器（CredRead/CredWrite）；bcrypt: 密码学随机数

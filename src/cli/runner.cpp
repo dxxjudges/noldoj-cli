@@ -1033,7 +1033,7 @@ int run(int argc, char** argv) {
         Invocation inv = parseInvocation(argc, argv);
 
         if (inv.version) {
-            std::cout << "noldoj-cli 1.0.0\n";
+            std::cout << "noldoj-cli " << NOLDOJ_VERSION << "\n";
             return 0;
         }
 

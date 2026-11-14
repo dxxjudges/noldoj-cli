@@ -1,0 +1,35 @@
+name: Publish npm Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write   # 可信发布（OIDC），无需 NPM_TOKEN
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false   # 发布构建不使用缓存
+
+      - name: 校验标签与 package.json 版本一致
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::标签 ${GITHUB_REF_NAME} 与 package.json 版本 v${version} 不一致；请用 npm version 更新版本"
+            exit 1
+          fi
+
+      - run: npm ci
+      - run: npm run build --if-present
+      - run: npm test
+      - run: npm publish
