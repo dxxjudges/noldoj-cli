@@ -1,6 +1,6 @@
 {
   "name": "noldoj-cli",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "NoldOJ 评测平台的跨平台命令行客户端：配置站点与私人令牌后，即可在终端刷题、出题、打比赛，或直接调用任意 API",
   "keywords": [
     "noldoj",
