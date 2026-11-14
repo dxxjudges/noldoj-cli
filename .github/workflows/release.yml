@@ -1,4 +1,4 @@
-name: Release
+﻿name: Release
 
 on:
   push:
@@ -81,7 +81,7 @@ jobs:
       - name: 构建（原生）
         if: ${{ !matrix.docker_image }}
         run: |
-          cmake -S main -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build
           mkdir -p dist
           cp build/noldoj "dist/noldoj-linux-${{ matrix.arch }}"
@@ -95,7 +95,7 @@ jobs:
             set -euo pipefail
             apt-get update
             apt-get install -y --no-install-recommends build-essential cmake ninja-build libcurl4-openssl-dev ca-certificates file
-            cmake -S main -B build-x86 -G Ninja -DCMAKE_BUILD_TYPE=Release
+            cmake -S . -B build-x86 -G Ninja -DCMAKE_BUILD_TYPE=Release
             cmake --build build-x86
             mkdir -p dist
             cp build-x86/noldoj dist/noldoj-linux-x86
@@ -152,7 +152,7 @@ jobs:
         if: ${{ matrix.msystem }}
         shell: msys2 {0}
         run: |
-          cmake -S main -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS=-static
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS=-static
           cmake --build build
           mkdir -p dist
           cp build/noldoj.exe "dist/noldoj-windows-${{ matrix.arch }}.exe"
@@ -173,7 +173,7 @@ jobs:
           tar xf llvm-mingw.tar.xz
           export PATH="$PWD/$(ls -d llvm-mingw-*-x86_64)/bin:$PATH"
           aarch64-w64-mingw32-clang++ --version
-          cmake -S main -B build-arm64 -G Ninja \
+          cmake -S . -B build-arm64 -G Ninja \
             -DCMAKE_SYSTEM_NAME=Windows \
             -DCMAKE_C_COMPILER=aarch64-w64-mingw32-clang \
             -DCMAKE_CXX_COMPILER=aarch64-w64-mingw32-clang++ \
@@ -209,7 +209,7 @@ jobs:
         run: |
           set -euxo pipefail
           for arch in arm64 x86_64; do
-            cmake -S main -B "build-$arch" -G Ninja \
+            cmake -S . -B "build-$arch" -G Ninja \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_OSX_ARCHITECTURES="$arch"
             cmake --build "build-$arch"

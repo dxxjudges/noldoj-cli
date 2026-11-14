@@ -1,4 +1,4 @@
-name: CI
+﻿name: CI
 
 on:
   push:
@@ -16,10 +16,10 @@ jobs:
         include:
           - name: linux-x64
             os: ubuntu-latest
-            binary: main/build/noldoj
+            binary: build/noldoj
           - name: windows-x64
             os: windows-latest
-            binary: main/build/noldoj.exe
+            binary: build/noldoj.exe
 
     steps:
       - name: 检出代码
@@ -42,21 +42,21 @@ jobs:
 
       - name: 配置（Linux）
         if: runner.os == 'Linux'
-        run: cmake -S main -B main/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: 配置（Windows / MinGW）
         if: runner.os == 'Windows'
         shell: msys2 {0}
-        run: cmake -S main -B main/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS=-static
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXE_LINKER_FLAGS=-static
 
       - name: 构建（Linux）
         if: runner.os == 'Linux'
-        run: cmake --build main/build
+        run: cmake --build build
 
       - name: 构建（Windows / MinGW）
         if: runner.os == 'Windows'
         shell: msys2 {0}
-        run: cmake --build main/build
+        run: cmake --build build
 
       - name: 测试
         run: python tests/run_tests.py "${{ matrix.binary }}"

@@ -109,51 +109,51 @@
 
     <h3>Windows x64 / x86 / arm64</h3>
 <pre><span class="cmt"># x64（MinGW 或默认工具链）</span>
-cmake -S main -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 
 <span class="cmt"># x86（MinGW32）</span>
-cmake -S main -B build -G Ninja -DCMAKE_CXX_FLAGS=-m32
+cmake -S . -B build -G Ninja -DCMAKE_CXX_FLAGS=-m32
 
 <span class="cmt"># arm64（Visual Studio 2022）</span>
-cmake -S main -B build -G "Visual Studio 17 2022" -A ARM64
+cmake -S . -B build -G "Visual Studio 17 2022" -A ARM64
 cmake --build build --config Release</pre>
 
     <h3>Linux x64 / x86 / arm64</h3>
 <pre><span class="cmt"># x64 / arm64（原生，自动链接 libcurl）</span>
-cmake -S main -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 
 <span class="cmt"># arm64 交叉编译</span>
-cmake -S main -B build -G Ninja \
+cmake -S . -B build -G Ninja \
   -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
 
 <span class="cmt"># x86（32 位）交叉编译</span>
-cmake -S main -B build -G Ninja \
+cmake -S . -B build -G Ninja \
   -DCMAKE_CXX_COMPILER=i686-linux-gnu-g++</pre>
 
     <h3>macOS x64 / arm64</h3>
 <pre><span class="cmt"># 本机架构（Apple Silicon 为 arm64，Intel 为 x64）</span>
-cmake -S main -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 
 <span class="cmt"># 指定架构</span>
-cmake -S main -B build -G Ninja \
+cmake -S . -B build -G Ninja \
   -DCMAKE_OSX_ARCHITECTURES=arm64
-cmake -S main -B build-x64 -G Ninja \
+cmake -S . -B build-x64 -G Ninja \
   -DCMAKE_OSX_ARCHITECTURES=x86_64
 
 <span class="cmt"># 使用 Homebrew 的 curl（可选）</span>
-cmake -S main -B build -G Ninja -DCMAKE_PREFIX_PATH=$(brew --prefix curl)</pre>
+cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH=$(brew --prefix curl)</pre>
     <div class="callout">macOS 系统自带 libcurl 与头文件（位于 Xcode Command Line Tools 的 SDK 中），通常无需额外安装依赖。</div>
 
     <h3>Android / Termux（arm64）</h3>
 <pre>pkg install cmake ninja libcurl pkg-config
-cmake -S main -B build -G Ninja -DCMAKE_PREFIX_PATH=$PREFIX
+cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH=$PREFIX
 cmake --build build</pre>
 
     <h3>Android NDK</h3>
-<pre>cmake -S main -B build -G Ninja \
+<pre>cmake -S . -B build -G Ninja \
   -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake \
   -DANDROID_ABI=arm64-v8a</pre>
     <div class="callout">NDK 不自带 libcurl，使用 NDK 交叉编译时需自行提供 libcurl（例如通过 vcpkg 或预编译产物），并通过 <code>CMAKE_PREFIX_PATH</code> 指定。</div>
