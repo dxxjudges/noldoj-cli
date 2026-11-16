@@ -31,6 +31,10 @@ noldoj help problem
 
 令牌不会明文落盘：`credentials.json` 使用 AES-256-CTR + HMAC-SHA256 加密，主密钥为首次启动时生成的 256 位随机密钥，保存在系统凭据库（Windows 凭据管理器 / macOS 钥匙串 / Linux Secret Service），不可用时回退到配置目录下权限 0600 的 `master.key`。用 `noldoj config path` 查看实际位置。
 
+## 许可证
+
+[MIT](LICENSE)
+
 ## 从源码构建
 
 ```bash
